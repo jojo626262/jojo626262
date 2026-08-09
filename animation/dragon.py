@@ -12,10 +12,12 @@ import time
 from pathlib import Path
 
 WIDTH = 96
-HEIGHT = 30
+HEIGHT = 34
 FPS = 12
-TOTAL_FRAMES = 180
+TOTAL_FRAMES = 216
 FIRE_START = 132
+LAND_START = 172
+LAND_END = 204
 
 COLORS = {
     "sky": "#07111f",
@@ -30,7 +32,10 @@ COLORS = {
     "fire_red": "#ef476f",
     "fire_orange": "#ff8c42",
     "fire_yellow": "#ffe66d",
-    "castle": "#41536b",
+    "castle_dark": "#26364d",
+    "castle_stone": "#52677f",
+    "castle_light": "#71879d",
+    "castle_gold": "#f5c451",
     "message": "#79e7ff",
 }
 
@@ -100,20 +105,31 @@ DRAGON_WINGS = (
     ),
 )
 
+DRAGON_WING_FOLDED = (
+    "................................",
+    "................................",
+    "................................",
+    "................................",
+    "................................",
+    ".............gggg...............",
+    "............gGGGGg..............",
+    "...........gGGLLGGg.............",
+    "............gGGGGg..............",
+    ".............gggg...............",
+    "................................",
+    "................................",
+    "................................",
+    "................................",
+    "................................",
+    "................................",
+)
+
 MOON = (
     "   _.._   ",
     " .'    `. ",
     "/  .--.  \\",
     "\\  `--'  /",
     " `-.__.-' ",
-)
-
-CASTLE = (
-    "        |>>>                    |>>>                    |>>>",
-    "        |                       |                       |",
-    "     _  |_  _              _  _|_  _              _  |_  _",
-    "    | |_| |_| |            | |_| |_| |            | |_| |_| |",
-    "____|         |____________|         |____________|         |____",
 )
 
 FONT = {
@@ -214,29 +230,71 @@ def draw_sky(canvas: Canvas, frame: int, show_moon: bool) -> None:
 
 
 def draw_castle(canvas: Canvas) -> None:
-    x = (WIDTH - max(map(len, CASTLE))) // 2
-    for row, line in enumerate(CASTLE):
-        canvas.text(x, HEIGHT - len(CASTLE) + row, line, "castle")
+    castle_top = 52
+    for x in range(WIDTH):
+        for pixel_y in range(castle_top, HEIGHT * 2):
+            brick_row = (pixel_y - castle_top) // 4
+            offset_x = x + (brick_row % 2) * 5
+            color = "castle_stone"
+            if pixel_y % 4 == 0 or offset_x % 10 == 0:
+                color = "castle_dark"
+            elif (x * 7 + pixel_y * 3) % 29 == 0:
+                color = "castle_light"
+            canvas.put_pixel(x, pixel_y, color)
+
+    for x in range(WIDTH):
+        if x % 8 in (1, 2, 3, 4):
+            for pixel_y in range(castle_top - 4, castle_top):
+                canvas.put_pixel(x, pixel_y, "castle_stone")
+            canvas.put_pixel(x, castle_top - 4, "castle_light")
+
+    for window_x in (10, 31, 63, 82):
+        canvas.put_pixel(window_x + 1, castle_top + 5, "castle_gold")
+        for pixel_y in range(castle_top + 6, castle_top + 11):
+            for x in range(window_x, window_x + 3):
+                canvas.put_pixel(x, pixel_y, "castle_gold")
+
+    for pixel_y in range(castle_top + 9, HEIGHT * 2):
+        half_width = min(5, 2 + (pixel_y - castle_top - 9) // 2)
+        for x in range(WIDTH // 2 - half_width, WIDTH // 2 + half_width + 1):
+            canvas.put_pixel(x, pixel_y, "castle_dark")
+
+    for banner_x in (24, 71):
+        for pixel_y in range(castle_top - 2, castle_top + 7):
+            canvas.put_pixel(banner_x, pixel_y, "castle_gold")
+        canvas.put_pixel(banner_x + 1, castle_top + 5, "castle_gold")
+        canvas.put_pixel(banner_x + 2, castle_top + 6, "castle_gold")
 
 
 def dragon_position(frame: int, width: int) -> tuple[int, int, bool]:
-    span = WIDTH + width + 4
+    left = -width - 2
+    flight_span = WIDTH + width + 4
     if frame < 56:
         progress = frame / 55
-        return round(-width - 2 + progress * span), 8 + round(math.sin(frame / 5)), False
+        return round(left + progress * flight_span), 8 + round(math.sin(frame / 5)), False
     if frame < 112:
         progress = (frame - 56) / 55
-        return WIDTH + 2 - round(progress * span), 8 + round(math.sin(frame / 5)), True
+        return round(WIDTH + 2 - progress * flight_span), 8 + round(math.sin(frame / 5)), True
     if frame < FIRE_START:
         progress = (frame - 112) / (FIRE_START - 112)
         eased = progress * progress * (3 - 2 * progress)
         x = round(-width - 2 + eased * (width + 4))
         return x, 8 + round(math.sin(frame / 5)), False
-    return 2, 8, False
+    if frame < LAND_START:
+        return 2, 8, False
+    if frame < LAND_END:
+        progress = (frame - LAND_START) / (LAND_END - LAND_START)
+        eased = progress * progress * (3 - 2 * progress)
+        arc = math.sin(math.pi * progress) * 2
+        return 2, round(8 + eased * 10 - arc), False
+    return 2, 18, False
 
 
 def draw_dragon(canvas: Canvas, frame: int) -> tuple[int, int]:
-    wing = DRAGON_WINGS[(frame // 3) % len(DRAGON_WINGS)]
+    if frame >= LAND_END - 8:
+        wing = DRAGON_WING_FOLDED
+    else:
+        wing = DRAGON_WINGS[(frame // 6) % len(DRAGON_WINGS)]
     width = max(map(len, DRAGON_BODY))
     x, y, flip = dragon_position(frame, width)
     canvas.pixel_sprite(x, y, wing, DRAGON_PALETTE, flip)
@@ -278,7 +336,7 @@ def draw_message(canvas: Canvas, frame: int) -> None:
     if age < 2:
         return
 
-    for block, y in ((MESSAGE[0], 6), (MESSAGE[1], 15)):
+    for block, y in ((MESSAGE[0], 7), (MESSAGE[1], 15)):
         width = max(map(len, block))
         x = 36 + (WIDTH - 36 - width) // 2
         for row, line in enumerate(block):
@@ -292,7 +350,7 @@ def draw_message(canvas: Canvas, frame: int) -> None:
 
 def make_frame(frame: int) -> Canvas:
     canvas = Canvas()
-    draw_sky(canvas, frame, show_moon=frame < 112)
+    draw_sky(canvas, frame, show_moon=True)
     draw_castle(canvas)
     mouth_x, mouth_y = draw_dragon(canvas, frame)
     draw_creation_fire(canvas, frame, mouth_x, mouth_y)
