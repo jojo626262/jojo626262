@@ -10,4 +10,4 @@ Set TypingSpeed 0ms
 
 Type "python animation/dragon.py --fps 12 --loops 1"
 Enter
-Sleep 11s
+Sleep 16s

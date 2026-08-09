@@ -14,7 +14,8 @@ from pathlib import Path
 WIDTH = 96
 HEIGHT = 30
 FPS = 12
-TOTAL_FRAMES = 120
+TOTAL_FRAMES = 180
+FIRE_START = 132
 
 COLORS = {
     "sky": "#07111f",
@@ -47,30 +48,26 @@ ANSI = {
 
 DRAGON_FRAMES = (
     (
-        "              /\\                       ",
-        "         ____/  \\____                   ",
-        "    ____/            \\_____             ",
-        " __/     _      _          `-.          ",
-        "<__     / \\____/ \\            \\         ",
-        "   `-._/    /\\    \\____        |        ",
-        "       \\___/  \\_______ `-.___  /         ",
-        "          / /\\ \\          `-<__           ",
-        "         /_/  \\_\\       .-(o  o)==>      ",
-        "                         /  \\__/           ",
-        "                         \\__/              ",
+        "       /\\                       /\\       ",
+        "   ___/  \\____           ____/  \\___   ",
+        "  /           \\_________/           \\  ",
+        " /_____________/\\ (@::@) /\\_____________\\ ",
+        "                 \\  \\//  /                 ",
+        "          ________\\ (oo) /________          ",
+        "         / / /     \\ VV /     \\ \\ \\         ",
+        "        /_/_/       \\  /       \\_\\_\\        ",
+        "                     /__\\                  ",
     ),
     (
-        "                                         ",
-        "    ____                                 ",
-        " __/    \\_____              ____        ",
-        "<__     _      `------------'   `-.     ",
-        "   `-._/ \\____      ____          \\     ",
-        "       \\      \\____/    \\          |    ",
-        "        \\____/ /\\        \\___.----'     ",
-        "             _/  \\_        `-<__        ",
-        "            / /\\ \\ \\     .-(o  o)==>  ",
-        "           /_/  \\_\\_\\   /  \\__/       ",
-        "                         \\__/              ",
+        "                                           ",
+        "    _______                   _______    ",
+        " __/       \\____         ____/       \\__ ",
+        "/      /\\       \\_______/       /\\      \\",
+        "\\____/  \\_______/\\ (@::@) /\\_______/  \\____/",
+        "                  \\  \\//  /                 ",
+        "           ________\\ (oo) /________          ",
+        "           \\ \\ \\   \\ VV /   / / /          ",
+        "            \\_\\_\\   \\  /   /_/_/           ",
     ),
 )
 
@@ -121,11 +118,6 @@ class Canvas:
             self.put(x + offset, y, char, color)
 
 
-def mirror(line: str) -> str:
-    swaps = str.maketrans("/\\<>()[]{}", "\\/><)(][}{")
-    return line[::-1].translate(swaps)
-
-
 def make_stars() -> tuple[tuple[int, int, int, str], ...]:
     rng = random.Random(626262)
     stars = []
@@ -155,61 +147,40 @@ def draw_castle(canvas: Canvas) -> None:
         canvas.text(x, HEIGHT - len(CASTLE) + row, line, "castle")
 
 
-def dragon_position(frame: int, width: int) -> tuple[int, bool]:
-    if frame < 40:
-        progress, facing_right = frame / 39, True
-    elif frame < 80:
-        progress, facing_right = (frame - 40) / 39, False
-    else:
-        progress, facing_right = (frame - 80) / 19, True
-
+def dragon_position(frame: int, width: int) -> tuple[int, int]:
     span = WIDTH + width + 4
-    x = round(-width - 2 + progress * span)
-    if not facing_right:
-        x = WIDTH + 2 - round(progress * span)
-    return x, facing_right
+    if frame < 56:
+        progress = frame / 55
+        return round(-width - 2 + progress * span), 7 + round(math.sin(frame / 5))
+    if frame < 112:
+        progress = (frame - 56) / 55
+        return WIDTH + 2 - round(progress * span), 7 + round(math.sin(frame / 5))
+    if frame < FIRE_START:
+        progress = (frame - 112) / (FIRE_START - 112)
+        eased = progress * progress * (3 - 2 * progress)
+        x = round(-width - 2 + eased * (WIDTH // 2 + width // 2 + 2))
+        y = round(7 - eased * 6)
+        return x, y
+    return (WIDTH - width) // 2, 1
 
 
-def draw_fire(canvas: Canvas, origin_x: int, origin_y: int, facing_right: bool, frame: int, strength: int) -> None:
-    if strength <= 0:
-        return
-    direction = 1 if facing_right else -1
-    chars = "~*oO@"
-    colors = ("fire_yellow", "fire_yellow", "fire_orange", "fire_orange", "fire_red")
-    rng = random.Random(frame * 97 + 626262)
-
-    for distance in range(1, strength + 1):
-        spread = max(1, distance // 6)
-        y = origin_y + rng.randint(-spread, spread)
-        index = min(len(chars) - 1, distance * len(chars) // max(1, strength + 1))
-        canvas.put(origin_x + direction * distance, y, chars[index], colors[index])
-        if distance > 5 and distance % 3 == 0:
-            canvas.put(origin_x + direction * distance, y + rng.choice((-1, 1)), ".", "fire_red")
-
-
-def draw_dragon(canvas: Canvas, frame: int) -> None:
+def draw_dragon(canvas: Canvas, frame: int) -> tuple[int, int]:
     art = DRAGON_FRAMES[(frame // 3) % len(DRAGON_FRAMES)]
     art_width = max(map(len, art))
-    x, facing_right = dragon_position(frame, art_width)
-    y = 14 + round(math.sin(frame / 4) * 0.8)
+    x, y = dragon_position(frame, art_width)
+    mouth = (x + art_width // 2, y + 6)
 
     for row, source in enumerate(art):
         line = source.ljust(art_width)
-        if not facing_right:
-            line = mirror(line)
         color = "dragon_bright" if row < 3 or (frame // 3 + row) % 5 == 0 else "dragon"
         canvas.text(x, y + row, line, color)
+        for column, char in enumerate(source):
+            if char in "@o":
+                canvas.put(x + column, y + row, char, "eye")
+        if "VV" in source:
+            mouth = (x + source.index("VV") + 1, y + row)
 
-    head_x = x + art_width - 1 if facing_right else x
-    canvas.put(head_x - (5 if facing_right else -5), y + 8, "o", "eye")
-
-    local = frame % 40
-    strength = 0
-    if 20 <= local <= 30:
-        strength = min(local - 18, 32 - local) * 2
-    if frame >= 84:
-        strength = min(22, max(0, frame - 83) * 2)
-    draw_fire(canvas, head_x, y + 8, facing_right, frame, strength)
+    return mouth
 
 
 def block_text(text: str) -> tuple[str, ...]:
@@ -222,27 +193,56 @@ def block_text(text: str) -> tuple[str, ...]:
 MESSAGE = (block_text("WELCOME TO"), block_text("MY GITHUB"))
 
 
-def draw_message(canvas: Canvas, frame: int) -> None:
-    reveal = max(0.0, min(1.0, (frame - 88) / 16))
-    if reveal <= 0:
+def draw_creation_fire(canvas: Canvas, frame: int, mouth_x: int, mouth_y: int) -> None:
+    age = frame - FIRE_START
+    if age < 0 or age > 35:
         return
 
-    for block, y in zip(MESSAGE, (3, 10)):
+    rng = random.Random(frame * 97 + 626262)
+    stream_length = min(6, age + 1)
+    flame_chars = "*oO@"
+    flame_colors = ("fire_yellow", "fire_yellow", "fire_orange", "fire_red")
+
+    for distance in range(1, stream_length + 1):
+        index = (distance + frame) % len(flame_chars)
+        canvas.put(mouth_x + rng.choice((-1, 0, 0, 1)), mouth_y + distance, flame_chars[index], flame_colors[index])
+
+    for center_y, delay in ((15, 6), (21, 10)):
+        radius = min(32, max(0, age - delay) * 2)
+        if radius == 0:
+            continue
+        for direction in (-1, 1):
+            front_x = mouth_x + direction * radius
+            canvas.put(front_x, center_y + rng.choice((-1, 0, 1)), "@", "fire_red")
+            canvas.put(front_x - direction, center_y + rng.choice((-1, 0, 1)), "O", "fire_orange")
+        for x in range(mouth_x - radius, mouth_x + radius + 1):
+            if rng.random() < 0.08:
+                canvas.put(x, center_y + rng.choice((-2, -1, 0, 1, 2)), rng.choice("~*o"), rng.choice(flame_colors[:3]))
+
+
+def draw_message(canvas: Canvas, frame: int) -> None:
+    age = frame - FIRE_START
+    if age < 6:
+        return
+
+    for block, y, delay in ((MESSAGE[0], 13, 6), (MESSAGE[1], 19, 10)):
         width = max(map(len, block))
-        visible = round(width * reveal)
         x = (WIDTH - width) // 2
         for row, line in enumerate(block):
             for column, char in enumerate(line):
-                if column < visible and char == "#":
-                    canvas.put(x + column, y + row, "#", "message")
+                reveal_age = delay + math.ceil(abs(column - width / 2) / 2)
+                if char == "#" and age >= reveal_age:
+                    heat = age - reveal_age
+                    color = "fire_yellow" if heat < 2 else "fire_orange" if heat < 4 else "message"
+                    canvas.put(x + column, y + row, "#", color)
 
 
 def make_frame(frame: int) -> Canvas:
     canvas = Canvas()
-    draw_sky(canvas, frame, show_moon=frame < 88)
+    draw_sky(canvas, frame, show_moon=frame < 112)
     draw_castle(canvas)
-    if frame < 100:
-        draw_dragon(canvas, frame)
+    mouth_x, mouth_y = draw_dragon(canvas, frame)
+    draw_creation_fire(canvas, frame, mouth_x, mouth_y)
     draw_message(canvas, frame)
     return canvas
 
