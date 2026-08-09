@@ -2,7 +2,7 @@
 
 🚀 Software Engineering Student, der gerne Dinge baut, kaputt macht und wieder repariert.
 
-<img src="https://media.giphy.com/media/qgQUggAC3Pfv687qPC/giphy.gif" width="400" alt="coding gif"/>
+<img src="assets/dragon-terminal.gif" width="100%" alt="Animated ASCII dragon flying across a terminal skyline"/>
 
 ## 🛠️ Tech Stack
 `Java` `HTML` `CSS` `SQL`
