@@ -1,13 +1,8 @@
-# > Hi, ich bin Jo_ 👾
+# Hi, ich bin Jo 👋
 
-```
-$ whoami
-> Software Engineering Student
-> Status: Access granted
-> Mode: Code. Debug. Repeat.
-```
+🚀 Software Engineering Student, der gerne Dinge baut, kaputt macht und wieder repariert.
 
-<img src="https://media.giphy.com/media/3oEjHWbXcpeKhTktXi/giphy.gif" width="400" alt="terminal gif"/>
+<img src="https://media.giphy.com/media/qgQUggAC3Pfv687qPC/giphy.gif" width="400" alt="coding gif"/>
 
 ## 🛠️ Tech Stack
 `Java` `HTML` `CSS` `SQL`
