@@ -23,7 +23,11 @@ COLORS = {
     "sky": "#07111f",
     "star_dim": "#52657a",
     "star": "#b8d8f0",
-    "moon": "#f6e7bd",
+    "moon": "#e6e0d5",
+    "moon_highlight": "#fff3df",
+    "moon_shadow": "#9a9da3",
+    "moon_dark": "#626772",
+    "moon_edge": "#333b49",
     "dragon_dark": "#176b3a",
     "dragon_green": "#35b95f",
     "dragon_light": "#7bea72",
@@ -124,12 +128,29 @@ DRAGON_WING_FOLDED = (
     "................................",
 )
 
-MOON = (
-    "   _.._   ",
-    " .'    `. ",
-    "/  .--.  \\",
-    "\\  `--'  /",
-    " `-.__.-' ",
+MOON_PALETTE = {
+    "m": "moon",
+    "h": "moon_highlight",
+    "s": "moon_shadow",
+    "d": "moon_dark",
+    "e": "moon_edge",
+}
+
+MOON_PIXELS = (
+    "....eeeeee....",
+    "..edssmmmhee..",
+    ".edsssmmmhhhe.",
+    "edsssdssmhhhee",
+    "edddddssmhhhee",
+    "edddsssdhhhhhe",
+    "eddssddssmhhhe",
+    "edssddssmmhhhe",
+    "edddsssmmmhhhe",
+    "eddssddmmmhhhe",
+    "eddddssmmmhhee",
+    ".eddddssmmmhe.",
+    "..edssmmmmee..",
+    "....eeeeee....",
 )
 
 FONT = {
@@ -225,8 +246,7 @@ def draw_sky(canvas: Canvas, frame: int, show_moon: bool) -> None:
         canvas.put(x, y, char, color)
 
     if show_moon:
-        for row, line in enumerate(MOON):
-            canvas.text(76, 2 + row, line, "moon")
+        canvas.pixel_sprite(79, 0, MOON_PIXELS, MOON_PALETTE, flip=False)
 
 
 def draw_castle(canvas: Canvas) -> None:
