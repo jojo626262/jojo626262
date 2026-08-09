@@ -22,9 +22,11 @@ COLORS = {
     "star_dim": "#52657a",
     "star": "#b8d8f0",
     "moon": "#f6e7bd",
-    "dragon": "#4fd1c5",
-    "dragon_bright": "#9ff7eb",
-    "eye": "#ffe66d",
+    "dragon_dark": "#176b3a",
+    "dragon_green": "#35b95f",
+    "dragon_light": "#7bea72",
+    "dragon_gold": "#f2c14e",
+    "eye": "#fff4b0",
     "fire_red": "#ef476f",
     "fire_orange": "#ff8c42",
     "fire_yellow": "#ffe66d",
@@ -32,42 +34,69 @@ COLORS = {
     "message": "#79e7ff",
 }
 
-ANSI = {
-    "star_dim": "\033[38;5;60m",
-    "star": "\033[38;5;153m",
-    "moon": "\033[38;5;229m",
-    "dragon": "\033[38;5;43m",
-    "dragon_bright": "\033[38;5;159m",
-    "eye": "\033[38;5;221m",
-    "fire_red": "\033[38;5;197m",
-    "fire_orange": "\033[38;5;208m",
-    "fire_yellow": "\033[38;5;226m",
-    "castle": "\033[38;5;60m",
-    "message": "\033[38;5;117m",
+DRAGON_PALETTE = {
+    "g": "dragon_dark",
+    "G": "dragon_green",
+    "L": "dragon_light",
+    "y": "dragon_gold",
+    "e": "eye",
 }
 
-DRAGON_FRAMES = (
+DRAGON_BODY = (
+    "................................",
+    "................................",
+    "................................",
+    ".........................y..y...",
+    "........................yG.yG...",
+    "......................gggggggg..",
+    "...................ggGGGGeGGgg..",
+    "..............ggGGGGGGGGGGGGGGgg",
+    "g..........ggGGGGGGGLLGGGGGGGGGg",
+    "gggggggggggGGGGGGGGGGGGGGGGGGgg.",
+    "..ggGGGGGGGGGGGGGGGGGGGGGGGgg...",
+    ".....ggGGGGGGyyyyGGGGGGGGgg.....",
+    ".........ggGGyyyyGGGGgg.........",
+    "...........ggGG...GGgg..........",
+    "..........gg.......gg...........",
+    ".........gg.........gg..........",
+)
+
+DRAGON_WINGS = (
     (
-        "       /\\                       /\\       ",
-        "   ___/  \\____           ____/  \\___   ",
-        "  /           \\_________/           \\  ",
-        " /_____________/\\ (@::@) /\\_____________\\ ",
-        "                 \\  \\//  /                 ",
-        "          ________\\ (oo) /________          ",
-        "         / / /     \\ VV /     \\ \\ \\         ",
-        "        /_/_/       \\  /       \\_\\_\\        ",
-        "                     /__\\                  ",
+        ".............g..................",
+        "............gGg.................",
+        "...........gGGGg................",
+        "..........gGGLGGg...............",
+        ".........gGGL.LGGg..............",
+        "........gGGg...gGGg.............",
+        ".......gGGg.....gGGGg...........",
+        ".........gg.......gg............",
+        "................................",
+        "................................",
+        "................................",
+        "................................",
+        "................................",
+        "................................",
+        "................................",
+        "................................",
     ),
     (
-        "                                           ",
-        "    _______                   _______    ",
-        " __/       \\____         ____/       \\__ ",
-        "/      /\\       \\_______/       /\\      \\",
-        "\\____/  \\_______/\\ (@::@) /\\_______/  \\____/",
-        "                  \\  \\//  /                 ",
-        "           ________\\ (oo) /________          ",
-        "           \\ \\ \\   \\ VV /   / / /          ",
-        "            \\_\\_\\   \\  /   /_/_/           ",
+        "................................",
+        "................................",
+        "................................",
+        "................................",
+        "................................",
+        "................................",
+        "..............gggg..............",
+        "............ggGGGGgg............",
+        "..........ggGGLGGGGgg...........",
+        "........ggGGGg.gGGGGg...........",
+        "......ggGGGg....gGGGg...........",
+        ".....gGGGg.......gGGg...........",
+        "....gGGg..........gg............",
+        "...gGGg.........................",
+        "....gg..........................",
+        "................................",
     ),
 )
 
@@ -107,15 +136,58 @@ FONT = {
 
 class Canvas:
     def __init__(self) -> None:
-        self.rows = [[(" ", "sky") for _ in range(WIDTH)] for _ in range(HEIGHT)]
+        self.rows = [[(" ", None, None) for _ in range(WIDTH)] for _ in range(HEIGHT)]
 
     def put(self, x: int, y: int, char: str, color: str) -> None:
         if 0 <= x < WIDTH and 0 <= y < HEIGHT and char != " ":
-            self.rows[y][x] = (char, color)
+            self.rows[y][x] = (char, color, None)
 
     def text(self, x: int, y: int, value: str, color: str) -> None:
         for offset, char in enumerate(value):
             self.put(x + offset, y, char, color)
+
+    def put_halves(self, x: int, y: int, top: str | None, bottom: str | None) -> None:
+        if not (0 <= x < WIDTH and 0 <= y < HEIGHT) or (top is None and bottom is None):
+            return
+
+        current_char, current_fg, current_bg = self.rows[y][x]
+        current_top = current_fg if current_char in ("▀", "█") else None
+        current_bottom = current_bg if current_char == "▀" else current_fg if current_char in ("▄", "█") else None
+        top = top or current_top
+        bottom = bottom or current_bottom
+
+        if top == bottom:
+            self.rows[y][x] = ("█", top, None)
+        elif top and bottom:
+            self.rows[y][x] = ("▀", top, bottom)
+        elif top:
+            self.rows[y][x] = ("▀", top, None)
+        else:
+            self.rows[y][x] = ("▄", bottom, None)
+
+    def put_pixel(self, x: int, pixel_y: int, color: str) -> None:
+        if pixel_y % 2 == 0:
+            self.put_halves(x, pixel_y // 2, color, None)
+        else:
+            self.put_halves(x, pixel_y // 2, None, color)
+
+    def pixel_sprite(
+        self,
+        x: int,
+        y: int,
+        sprite: tuple[str, ...],
+        palette: dict[str, str],
+        flip: bool,
+    ) -> None:
+        width = max(map(len, sprite))
+        rows = [line.ljust(width, ".") for line in sprite]
+        if flip:
+            rows = [line[::-1] for line in rows]
+        for pixel_y in range(0, len(rows), 2):
+            top_row = rows[pixel_y]
+            bottom_row = rows[pixel_y + 1] if pixel_y + 1 < len(rows) else "." * width
+            for pixel_x, (top_key, bottom_key) in enumerate(zip(top_row, bottom_row)):
+                self.put_halves(x + pixel_x, y + pixel_y // 2, palette.get(top_key), palette.get(bottom_key))
 
 
 def make_stars() -> tuple[tuple[int, int, int, str], ...]:
@@ -147,40 +219,30 @@ def draw_castle(canvas: Canvas) -> None:
         canvas.text(x, HEIGHT - len(CASTLE) + row, line, "castle")
 
 
-def dragon_position(frame: int, width: int) -> tuple[int, int]:
+def dragon_position(frame: int, width: int) -> tuple[int, int, bool]:
     span = WIDTH + width + 4
     if frame < 56:
         progress = frame / 55
-        return round(-width - 2 + progress * span), 7 + round(math.sin(frame / 5))
+        return round(-width - 2 + progress * span), 8 + round(math.sin(frame / 5)), False
     if frame < 112:
         progress = (frame - 56) / 55
-        return WIDTH + 2 - round(progress * span), 7 + round(math.sin(frame / 5))
+        return WIDTH + 2 - round(progress * span), 8 + round(math.sin(frame / 5)), True
     if frame < FIRE_START:
         progress = (frame - 112) / (FIRE_START - 112)
         eased = progress * progress * (3 - 2 * progress)
-        x = round(-width - 2 + eased * (WIDTH // 2 + width // 2 + 2))
-        y = round(7 - eased * 6)
-        return x, y
-    return (WIDTH - width) // 2, 1
+        x = round(-width - 2 + eased * (width + 4))
+        return x, 8 + round(math.sin(frame / 5)), False
+    return 2, 8, False
 
 
 def draw_dragon(canvas: Canvas, frame: int) -> tuple[int, int]:
-    art = DRAGON_FRAMES[(frame // 3) % len(DRAGON_FRAMES)]
-    art_width = max(map(len, art))
-    x, y = dragon_position(frame, art_width)
-    mouth = (x + art_width // 2, y + 6)
-
-    for row, source in enumerate(art):
-        line = source.ljust(art_width)
-        color = "dragon_bright" if row < 3 or (frame // 3 + row) % 5 == 0 else "dragon"
-        canvas.text(x, y + row, line, color)
-        for column, char in enumerate(source):
-            if char in "@o":
-                canvas.put(x + column, y + row, char, "eye")
-        if "VV" in source:
-            mouth = (x + source.index("VV") + 1, y + row)
-
-    return mouth
+    wing = DRAGON_WINGS[(frame // 3) % len(DRAGON_WINGS)]
+    width = max(map(len, DRAGON_BODY))
+    x, y, flip = dragon_position(frame, width)
+    canvas.pixel_sprite(x, y, wing, DRAGON_PALETTE, flip)
+    canvas.pixel_sprite(x, y, DRAGON_BODY, DRAGON_PALETTE, flip)
+    mouth_x = x if flip else x + width - 1
+    return mouth_x, y * 2 + 8
 
 
 def block_text(text: str) -> tuple[str, ...]:
@@ -199,38 +261,29 @@ def draw_creation_fire(canvas: Canvas, frame: int, mouth_x: int, mouth_y: int) -
         return
 
     rng = random.Random(frame * 97 + 626262)
-    stream_length = min(6, age + 1)
-    flame_chars = "*oO@"
     flame_colors = ("fire_yellow", "fire_yellow", "fire_orange", "fire_red")
+    length = min(WIDTH - mouth_x - 1, max(0, age - 1) * 2)
 
-    for distance in range(1, stream_length + 1):
-        index = (distance + frame) % len(flame_chars)
-        canvas.put(mouth_x + rng.choice((-1, 0, 0, 1)), mouth_y + distance, flame_chars[index], flame_colors[index])
-
-    for center_y, delay in ((15, 6), (21, 10)):
-        radius = min(32, max(0, age - delay) * 2)
-        if radius == 0:
-            continue
-        for direction in (-1, 1):
-            front_x = mouth_x + direction * radius
-            canvas.put(front_x, center_y + rng.choice((-1, 0, 1)), "@", "fire_red")
-            canvas.put(front_x - direction, center_y + rng.choice((-1, 0, 1)), "O", "fire_orange")
-        for x in range(mouth_x - radius, mouth_x + radius + 1):
-            if rng.random() < 0.08:
-                canvas.put(x, center_y + rng.choice((-2, -1, 0, 1, 2)), rng.choice("~*o"), rng.choice(flame_colors[:3]))
+    for distance in range(1, length + 1):
+        spread = max(1, distance // 4)
+        particles = 2 if distance < 10 else 1 + (distance + frame) % 2
+        for _ in range(particles):
+            pixel_y = mouth_y + rng.randint(-spread, spread)
+            color = rng.choice(flame_colors[:3] if distance < length - 4 else flame_colors[2:])
+            canvas.put_pixel(mouth_x + distance, pixel_y, color)
 
 
 def draw_message(canvas: Canvas, frame: int) -> None:
     age = frame - FIRE_START
-    if age < 6:
+    if age < 2:
         return
 
-    for block, y, delay in ((MESSAGE[0], 13, 6), (MESSAGE[1], 19, 10)):
+    for block, y in ((MESSAGE[0], 6), (MESSAGE[1], 15)):
         width = max(map(len, block))
-        x = (WIDTH - width) // 2
+        x = 36 + (WIDTH - 36 - width) // 2
         for row, line in enumerate(block):
             for column, char in enumerate(line):
-                reveal_age = delay + math.ceil(abs(column - width / 2) / 2)
+                reveal_age = 2 + math.ceil((x + column - 33) / 2)
                 if char == "#" and age >= reveal_age:
                     heat = age - reveal_age
                     color = "fire_yellow" if heat < 2 else "fire_orange" if heat < 4 else "message"
@@ -251,12 +304,15 @@ def ansi_frame(canvas: Canvas, use_color: bool) -> str:
     lines = []
     for row in canvas.rows:
         output = []
-        active = None
-        for char, color in row:
-            next_color = color if color != "sky" else None
-            if use_color and next_color != active:
-                output.append(ANSI.get(next_color, "\033[0m"))
-                active = next_color
+        active_fg = None
+        active_bg = None
+        for char, foreground, background in row:
+            if use_color and foreground != active_fg:
+                output.append(ansi_color(foreground, background=False))
+                active_fg = foreground
+            if use_color and background != active_bg:
+                output.append(ansi_color(background, background=True))
+                active_bg = background
             output.append(char)
         if use_color:
             output.append("\033[0m")
@@ -264,8 +320,18 @@ def ansi_frame(canvas: Canvas, use_color: bool) -> str:
     return "\n".join(lines)
 
 
+def ansi_color(color: str | None, background: bool) -> str:
+    if color is None:
+        return "\033[49m" if background else "\033[39m"
+    value = COLORS[color]
+    red, green, blue = (int(value[index : index + 2], 16) for index in (1, 3, 5))
+    return f"\033[{48 if background else 38};2;{red};{green};{blue}m"
+
+
 def play_terminal(fps: int, loops: int, use_color: bool) -> None:
     os.system("")
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     delay = 1 / fps
     sys.stdout.write("\033[2J\033[H\033[?25l")
     sys.stdout.flush()
@@ -318,16 +384,22 @@ def render_gif(output: Path, fps: int, font_path: str | None) -> None:
         image = Image.new("RGB", size, COLORS["sky"])
         draw = ImageDraw.Draw(image)
         for y, row in enumerate(canvas.rows):
-            x = 0
-            while x < WIDTH:
-                color = row[x][1]
-                end = x + 1
-                while end < WIDTH and row[end][1] == color:
-                    end += 1
-                value = "".join(char for char, _ in row[x:end])
-                if color != "sky" and value.strip():
-                    draw.text((padding + x * cell_width, padding + y * cell_height), value, font=font, fill=COLORS[color], spacing=0)
-                x = end
+            for x, (char, foreground, background) in enumerate(row):
+                left = padding + x * cell_width
+                top = padding + y * cell_height
+                right = left + cell_width - 1
+                bottom = top + cell_height - 1
+                middle = top + cell_height // 2
+                if char == "█" and foreground:
+                    draw.rectangle((left, top, right, bottom), fill=COLORS[foreground])
+                elif char == "▀" and foreground:
+                    draw.rectangle((left, top, right, middle - 1), fill=COLORS[foreground])
+                    if background:
+                        draw.rectangle((left, middle, right, bottom), fill=COLORS[background])
+                elif char == "▄" and foreground:
+                    draw.rectangle((left, middle, right, bottom), fill=COLORS[foreground])
+                elif foreground and char.strip():
+                    draw.text((left, top), char, font=font, fill=COLORS[foreground], spacing=0)
         frames.append(image.quantize(palette=palette, dither=Image.Dither.NONE))
 
     output.parent.mkdir(parents=True, exist_ok=True)
