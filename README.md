@@ -1,10 +1,13 @@
-# Hi, ich bin Jo 👋
+# > Hi, ich bin Jo_ 👾
 
-🚀 Software Engineering Student, der gerne Dinge baut, kaputt macht und wieder repariert.
+```
+$ whoami
+> Software Engineering Student | Code. Debug. Repeat.
+```
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&pause=1000&color=36BCF7&center=true&vCenter=true&width=440&lines=Code.+Debug.+Repeat.;Always+learning+something+new;Turning+coffee+into+commits" alt="Typing SVG" />
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&pause=1000&color=00FF41&center=true&vCenter=true&width=440&lines=Booting+system;Access+granted;Code.+Debug.+Repeat." alt="Typing SVG" />
 
-<img src="https://media.giphy.com/media/qgQUggAC3Pfv687qPC/giphy.gif" width="400" alt="coding gif"/>
+<img src="https://media.giphy.com/media/3oEjHWbXcpeKhTktXi/giphy.gif" width="400" alt="terminal gif"/>
 
 ## 🛠️ Tech Stack
 `Java` `HTML` `CSS` `SQL`
